@@ -6,9 +6,7 @@
 import logging
 from pickle import dump, load
 
-from game import CODE, GUESS, RESPONSE, MasterMind, Solver
-
-RESPONSE_SHEET = dict[RESPONSE, list[CODE]]
+from game import GUESS, RESPONSE, RESPONSE_SHEET, MasterMind, Solver
 
 
 class Knuth(Solver):
@@ -46,7 +44,7 @@ class Knuth(Solver):
         # go though all possible guesses to find guess with best score
         guesses = self.game.combinations()
         for guess in guesses:
-            response_sheet = self.response_sheet(guess)
+            response_sheet = self.response_sheet(self.S, guess)
             score = self.heuristic(response_sheet)
             if score > max_score:
                 max_score, best_guess = (score, guess)
@@ -68,38 +66,6 @@ class Knuth(Solver):
             int: The minimum number of eliminations for this guess.
         """
         return len(self.S) - max(len(codes) for codes in response_sheet.values())
-
-    def response_sheet(self, guess: GUESS) -> RESPONSE_SHEET:
-        """Calculate the response sheet for a guess.
-
-        Args:
-            guess (GUESS): The guess to evaluate.
-
-        Returns:
-            RESPONSE_SHEET: The response sheet. It is a dictionary with all
-                possible responses to this guess and their remaining possible
-                codes.
-
-        Example:
-            Response sheet for guess (1, 2, 3, 4):
-            {
-                (1, 0): [(1, 1, 1, 1), (1, 1, 1, 5), ...],
-                ...,
-                (1, 2): [(1, 3, 2, 5), ...],
-                ...,
-                (4, 0): [(1, 2, 3, 4)]
-            }
-        """
-        response_sheet = {}
-        # go through all remaining possibilities, calculate their response and
-        # add them to the dictionary
-        for code in self.S:
-            response = MasterMind.response(code, guess)
-            try:
-                response_sheet[response].append(code)
-            except KeyError:
-                response_sheet.update({response: [code]})
-        return response_sheet
 
     def feedback(self, response: RESPONSE):
         # update remaining possibilities

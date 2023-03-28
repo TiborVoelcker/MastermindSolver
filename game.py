@@ -12,6 +12,7 @@ from random import choice
 RESPONSE = tuple[int, int]
 GUESS = tuple[int, ...]
 CODE = GUESS
+RESPONSE_SHEET = dict[RESPONSE, list[CODE]]
 
 
 class MasterMind:
@@ -151,6 +152,40 @@ class Solver(ABC):
     @abstractmethod
     def feedback(self, response: RESPONSE):
         """Feed the response to the last guess back to the solver."""
+
+    @staticmethod
+    def response_sheet(combinations: list[CODE], guess: GUESS) -> RESPONSE_SHEET:
+        """Calculate the response sheet for a guess.
+
+        Args:
+            combinations (list[CODE]): The codes to consider.
+            guess (GUESS): The guess to evaluate.
+
+        Returns:
+            RESPONSE_SHEET: The response sheet. It is a dictionary with all
+                possible responses to this guess and their remaining possible
+                codes.
+
+        Example:
+            Response sheet for guess (1, 2, 3, 4):
+            {
+                (1, 0): [(1, 1, 1, 1), (1, 1, 1, 5), ...],
+                ...,
+                (1, 2): [(1, 3, 2, 5), ...],
+                ...,
+                (4, 0): [(1, 2, 3, 4)]
+            }
+        """
+        response_sheet = {}
+        # go through all remaining possibilities, calculate their response and
+        # add them to the dictionary
+        for code in combinations:
+            response = MasterMind.response(code, guess)
+            try:
+                response_sheet[response].append(code)
+            except KeyError:
+                response_sheet.update({response: [code]})
+        return response_sheet
 
 
 if __name__ == "__main__":
