@@ -189,9 +189,9 @@ class Solver(ABC):
 
 
 if __name__ == "__main__":
-    from solver import Knuth
+    from solver import IterativeDFS
 
-    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    logging.basicConfig(level=logging.DEBUG, format="%(message)s")
 
-    m = MasterMind(solver=Knuth)
+    m = MasterMind(solver=IterativeDFS, n_places=2, n_colors=6)
     m.play()

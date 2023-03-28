@@ -6,7 +6,7 @@
 import logging
 from pickle import dump, load
 
-from game import GUESS, RESPONSE, RESPONSE_SHEET, MasterMind, Solver
+from game import CODE, GUESS, RESPONSE, RESPONSE_SHEET, MasterMind, Solver
 
 
 class Knuth(Solver):
@@ -97,3 +97,78 @@ class Knuth(Solver):
                 dump((guess, self.__cached_response_sheet), f)
             logging.debug("Wrote first round successfully")
         return guess
+
+
+class IterativeDFS(Solver):
+    """Solver using Iterative deepening Depth-First-Search.
+
+    Attributes:
+        S (list[CODE]): A list of all possible codes. This is updated with
+            every response. The codes are represented as a tuple with length
+            *n_places* and numbers in the range (1, *n_colors*).
+    """
+
+    def __init__(self, game: MasterMind):
+        """Initializes the class."""
+        super().__init__(game)
+
+        self.S = self.game.combinations()
+        self.__cache: dict[str, tuple[GUESS, RESPONSE_SHEET]] = {}
+
+    def new_guess(self) -> GUESS:
+        return self.iterative_dfs()
+
+    def iterative_dfs(self):
+        """Search the result graph.
+
+        The algorithm goes through all possible guesses. For each guess, it
+        generates all possible responses and the still remaining possible
+        codes. Then, for the still remaining possible codes, a new guess is
+        found, and so on, up to a maximum depth. The maximum depth is then
+        increased per run, until a chain of guesses is found, where only one
+        possible code remains, independent of the received responses.
+
+        This means that this algorithm is very conservative. But the
+        worst-case scenario should be better than with Knuth's algorithm.
+
+        This recursive algorithm uses heavy memoization to speed up the
+        calculations.
+
+        Returns:
+            GUESS: The first guess to a complete valid chain of guesses.
+        """
+
+        max_depth = 0
+        best_guess = None
+        while best_guess is None:
+            max_depth += 1
+            best_guess = self._dfs(self.S, 1, max_depth)
+
+            if max_depth > 100:
+                raise RecursionError("Search is stuck in an infinite loop!")
+
+        return best_guess
+
+    def _dfs(self, codes: list[CODE], depth: int, max_depth: int) -> GUESS | None:
+        if str(codes) in self.__cache:
+            return self.__cache[str(codes)][0]
+
+        if depth > max_depth:
+            return None
+
+        if len(codes) == 1:
+            self.__cache[str(codes)] = codes[0], {(self.game.n_places, 0): [self.S[0]]}
+            return codes[0]
+
+        for guess in self.game.combinations():
+            response_sheet = self.response_sheet(codes, guess)
+            if all(self._dfs(codes, depth + 1, max_depth) for codes in response_sheet.values()):
+                if str(codes) not in self.__cache:
+                    self.__cache[str(codes)] = guess, response_sheet
+                    return guess
+
+        return None
+
+    def feedback(self, response: RESPONSE):
+        self.S = self.__cache[str(self.S)][1][response]
+        logging.debug("Updated possible combinations: %s", self.S)
