@@ -4,6 +4,7 @@
 """
 
 import logging
+from math import inf
 from pickle import dump, load
 
 from game import CODE, GUESS, RESPONSE, RESPONSE_SHEET, MasterMind, Solver
@@ -171,4 +172,46 @@ class IterativeDFS(Solver):
 
     def feedback(self, response: RESPONSE):
         self.S = self.__cache[str(self.S)][1][response]
+        logging.debug("Updated possible combinations: %s", self.S)
+
+
+class DFS(Solver):
+    def __init__(self, game: MasterMind, search_depth: int = 3):
+        super().__init__(game)
+
+        self.search_depth = search_depth
+        self.S = self.game.combinations()
+        self.__cached_response_sheet: dict[RESPONSE, list[CODE]] = {}
+
+    def new_guess(self) -> GUESS:
+        if len(self.S) == 1:
+            self.__cached_response_sheet = {(self.game.n_places, 0): [self.S[0]]}
+            return self.S[0]
+
+        _, guess, response_sheet = self.dfs(self.S, 1)
+
+        # cache response sheet
+        self.__cached_response_sheet = response_sheet
+
+        return guess
+
+    def dfs(self, codes: list[CODE], depth) -> tuple[float, GUESS, RESPONSE_SHEET]:
+        if depth > self.search_depth:
+            return len(codes), (), {}
+
+        min_score = inf
+        best_guess = ()
+        best_response_sheet = {}
+        for guess in self.game.combinations():
+            response_sheet = self.response_sheet(codes, guess)
+            score = max(self.dfs(codes, depth + 1)[0] for codes in response_sheet.values())
+            if score < min_score:
+                min_score = score
+                best_guess = guess
+                best_response_sheet = response_sheet
+
+        return min_score, best_guess, best_response_sheet
+
+    def feedback(self, response: RESPONSE):
+        self.S = self.__cached_response_sheet[response]
         logging.debug("Updated possible combinations: %s", self.S)
