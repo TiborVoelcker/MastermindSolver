@@ -82,7 +82,7 @@ class MasterMind:
 
         return places, colors - places
 
-    def play(self) -> int:
+    def play(self, secret_code: CODE | None = None) -> int:
         """Play a game of Master Mind.
 
         Returns:
@@ -90,7 +90,8 @@ class MasterMind:
         """
         starting_time = time.time()
         # choose random secret code
-        secret_code = choice(self.combinations())
+        if secret_code is None:
+            secret_code = choice(self.combinations())
         logging.debug("Secret Code: %s", secret_code)
 
         i = 0
