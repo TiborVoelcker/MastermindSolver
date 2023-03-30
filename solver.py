@@ -22,15 +22,15 @@ class Knuth(Solver):
         super().__init__(game)
 
         self.S = self.game.combinations()
-        self.__cache: dict[str, tuple[GUESS, RESPONSE_SHEET]] = {}
+        self._cache: dict[str, tuple[GUESS, RESPONSE_SHEET]] = {}
 
     def new_guess(self) -> GUESS:
-        if str(self.S) in self.__cache:
-            return self.__cache[str(self.S)][0]
+        if str(self.S) in self._cache:
+            return self._cache[str(self.S)][0]
 
         # Only one possible solution left.
         if len(self.S) == 1:
-            self.__cache[str(self.S)] = self.S[0], {(self.game.n_places, 0): [self.S[0]]}
+            self._cache[str(self.S)] = self.S[0], {(self.game.n_places, 0): [self.S[0]]}
             return self.S[0]
 
         best_guess = ()
@@ -45,7 +45,7 @@ class Knuth(Solver):
             if score > max_score:
                 max_score, best_guess, best_response_sheet = (score, guess, response_sheet)
 
-        self.__cache[str(self.S)] = best_guess, best_response_sheet
+        self._cache[str(self.S)] = best_guess, best_response_sheet
         return best_guess
 
     def heuristic(self, response_sheet: RESPONSE_SHEET) -> int:
@@ -67,7 +67,7 @@ class Knuth(Solver):
         if response == (self.game.n_places, 0):
             self.S = self.game.combinations()
         else:
-            self.S = self.__cache[str(self.S)][1][response]
+            self.S = self._cache[str(self.S)][1][response]
             logging.debug("Updated possible combinations: %s", self.S)
 
 
@@ -85,7 +85,7 @@ class IterativeDFS(Solver):
         super().__init__(game)
 
         self.S = self.game.combinations()
-        self.__cache: dict[str, tuple[GUESS, RESPONSE_SHEET]] = {}
+        self._cache: dict[str, tuple[GUESS, RESPONSE_SHEET]] = {}
 
     def new_guess(self) -> GUESS:
         return self.iterative_dfs()
@@ -122,21 +122,21 @@ class IterativeDFS(Solver):
         return best_guess
 
     def _dfs(self, codes: list[CODE], depth: int, max_depth: int) -> GUESS | None:
-        if str(codes) in self.__cache:
-            return self.__cache[str(codes)][0]
+        if str(codes) in self._cache:
+            return self._cache[str(codes)][0]
 
         if depth > max_depth:
             return None
 
         if len(codes) == 1:
-            self.__cache[str(codes)] = codes[0], {(self.game.n_places, 0): [self.S[0]]}
+            self._cache[str(codes)] = codes[0], {(self.game.n_places, 0): [self.S[0]]}
             return codes[0]
 
         for guess in self.game.combinations():
             response_sheet = self.response_sheet(codes, guess)
             if all(self._dfs(codes, depth + 1, max_depth) for codes in response_sheet.values()):
-                if str(codes) not in self.__cache:
-                    self.__cache[str(codes)] = guess, response_sheet
+                if str(codes) not in self._cache:
+                    self._cache[str(codes)] = guess, response_sheet
                     return guess
 
         return None
@@ -145,5 +145,5 @@ class IterativeDFS(Solver):
         if response == (self.game.n_places, 0):
             self.S = self.game.combinations()
         else:
-            self.S = self.__cache[str(self.S)][1][response]
+            self.S = self._cache[str(self.S)][1][response]
             logging.debug("Updated possible combinations: %s", self.S)
