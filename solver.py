@@ -4,7 +4,6 @@
 """
 
 import logging
-from pickle import dump, load
 
 from game import CODE, GUESS, RESPONSE, RESPONSE_SHEET, MasterMind, Solver
 
@@ -23,19 +22,15 @@ class Knuth(Solver):
         super().__init__(game)
 
         self.S = self.game.combinations()
-        self.__cached_response_sheet: dict[RESPONSE, list[CODE]] = {}
+        self.__cache: dict[str, tuple[GUESS, RESPONSE_SHEET]] = {}
 
     def new_guess(self) -> GUESS:
-        if self.is_first_round():
-            return self.round1()
+        if str(self.S) in self.__cache:
+            return self.__cache[str(self.S)][0]
 
-        return self._new_guess()
-
-    def _new_guess(self) -> GUESS:
-        """Calculate the best guess."""
         # Only one possible solution left.
         if len(self.S) == 1:
-            self.__cached_response_sheet = {(self.game.n_places, 0): [self.S[0]]}
+            self.__cache[str(self.S)] = self.S[0], {(self.game.n_places, 0): [self.S[0]]}
             return self.S[0]
 
         best_guess = ()
@@ -43,13 +38,14 @@ class Knuth(Solver):
 
         # go though all possible guesses to find guess with best score
         guesses = self.game.combinations()
+        best_response_sheet = {}
         for guess in guesses:
             response_sheet = self.response_sheet(self.S, guess)
             score = self.heuristic(response_sheet)
             if score > max_score:
-                max_score, best_guess = (score, guess)
-                # cache response sheet to speed up calculations later
-                self.__cached_response_sheet = response_sheet
+                max_score, best_guess, best_response_sheet = (score, guess, response_sheet)
+
+        self.__cache[str(self.S)] = best_guess, best_response_sheet
         return best_guess
 
     def heuristic(self, response_sheet: RESPONSE_SHEET) -> int:
@@ -71,35 +67,8 @@ class Knuth(Solver):
         if response == (self.game.n_places, 0):
             self.S = self.game.combinations()
         else:
-            # update remaining possibilities
-            # use the cached response sheet to speed up calculations
-            self.S = self.__cached_response_sheet[response]
+            self.S = self.__cache[str(self.S)][1][response]
             logging.debug("Updated possible combinations: %s", self.S)
-
-    def is_first_round(self) -> bool:
-        """Check if the current round is the first round."""
-        return len(self.S) == self.game.n_colors**self.game.n_places
-
-    def round1(self) -> GUESS:
-        """Play the first round.
-
-        The response sheet and best guess for round one is read from a file to
-        speed up the next game with the same settings. If no file is found,
-        the result of the first round is written into a file.
-
-        Returns:
-            GUESS: The best guess for the first round.
-        """
-        try:
-            with open(f"round1_{self.game.n_places}_{self.game.n_colors}.pickle", "rb") as f:
-                guess, self.__cached_response_sheet = load(f)
-                logging.debug("Loaded first round successfully.")
-        except FileNotFoundError:
-            guess = self._new_guess()
-            with open(f"round1_{self.game.n_places}_{self.game.n_colors}.pickle", "wb") as f:
-                dump((guess, self.__cached_response_sheet), f)
-            logging.debug("Wrote first round successfully")
-        return guess
 
 
 class IterativeDFS(Solver):

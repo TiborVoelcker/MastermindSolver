@@ -1,6 +1,3 @@
-# Project specific
-round1_*.pickle
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
