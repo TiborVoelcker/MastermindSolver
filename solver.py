@@ -68,10 +68,13 @@ class Knuth(Solver):
         return len(self.S) - max(len(codes) for codes in response_sheet.values())
 
     def feedback(self, response: RESPONSE):
-        # update remaining possibilities
-        # use the cached response sheet to speed up calculations
-        self.S = self.__cached_response_sheet[response]
-        logging.debug("Updated possible combinations: %s", self.S)
+        if response == (self.game.n_places, 0):
+            self.S = self.game.combinations()
+        else:
+            # update remaining possibilities
+            # use the cached response sheet to speed up calculations
+            self.S = self.__cached_response_sheet[response]
+            logging.debug("Updated possible combinations: %s", self.S)
 
     def is_first_round(self) -> bool:
         """Check if the current round is the first round."""
@@ -170,5 +173,8 @@ class IterativeDFS(Solver):
         return None
 
     def feedback(self, response: RESPONSE):
-        self.S = self.__cache[str(self.S)][1][response]
-        logging.debug("Updated possible combinations: %s", self.S)
+        if response == (self.game.n_places, 0):
+            self.S = self.game.combinations()
+        else:
+            self.S = self.__cache[str(self.S)][1][response]
+            logging.debug("Updated possible combinations: %s", self.S)
